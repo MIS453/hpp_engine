@@ -1,20 +1,24 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows: ["Train Model on Commit"]  # must match the name field in train.yml
-    types:
-      - completed
+  workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Download checkpoint artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: checkpoint
-          path: .
+      - uses: actions/checkout@v3
+
+      - name: Install GitHub CLI
+        run: sudo apt-get update && sudo apt-get install -y gh
+
+      - name: Download latest checkpoint artifact from train workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run list --workflow="Train Model on Commit" --branch=main --json databaseId --limit 1
+          LATEST_RUN_ID=$(gh run list --workflow="Train Model on Commit" --branch=main --json databaseId --limit 1 --jq '.[0].databaseId')
+          gh run download "$LATEST_RUN_ID" -n checkpoint
 
       - name: Create Release
         id: create_release
