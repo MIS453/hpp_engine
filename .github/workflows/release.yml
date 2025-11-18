@@ -2,24 +2,39 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Trigger release after training?'
+        required: false
+        default: 'false'
 
 jobs:
-  release:
+  train:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - run: pip install -r requirements.txt
+      - run: python train.py
+      - name: Upload checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoint
+          path: checkpoint.pkl
 
-      - name: Install GitHub CLI
-        run: sudo apt-get update && sudo apt-get install -y gh
-
-      - name: Download latest checkpoint artifact from train workflow
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh run list --workflow="Train Model on Commit" --branch=main --json databaseId --limit 1
-          LATEST_RUN_ID=$(gh run list --workflow="Train Model on Commit" --branch=main --json databaseId --limit 1 --jq '.[0].databaseId')
-          gh run download "$LATEST_RUN_ID" -n checkpoint
-
+  release:
+    needs: train
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download artifact (checkpoint)
+        uses: actions/download-artifact@v4
+        with:
+          name: checkpoint
+          path: .
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -30,7 +45,6 @@ jobs:
           release_name: "Model checkpoint ${{ github.run_number }}"
           draft: false
           prerelease: false
-
       - name: Upload checkpoint to Release
         uses: actions/upload-release-asset@v1
         env:
