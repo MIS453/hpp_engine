@@ -54,3 +54,6 @@ jobs:
           asset_path: ./checkpoint.pkl
           asset_name: checkpoint.pkl
           asset_content_type: application/octet-stream
+
+permissions:
+  contents: write
