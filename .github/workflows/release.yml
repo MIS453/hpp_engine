@@ -1,16 +1,16 @@
-name: Release Checkpoint
+name: Release
 
 on:
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["Train Model on Commit"]  # must match the name field in train.yml
+    types:
+      - completed
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      # Download the latest train artifact
-      - name: Download artifact
+      - name: Download checkpoint artifact
         uses: actions/download-artifact@v4
         with:
           name: checkpoint
