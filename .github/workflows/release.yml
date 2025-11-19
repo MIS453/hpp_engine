@@ -6,7 +6,7 @@ on:
       release:
         description: 'Trigger release after training?'
         required: false
-        default: 'false'
+        default: 'true'
 
 jobs:
   train:
@@ -17,12 +17,17 @@ jobs:
         with:
           python-version: '3.x'
       - run: pip install -r requirements.txt
-      - run: python train.py
+      - run: python train.py | tee train_output.txt
       - name: Upload checkpoint
         uses: actions/upload-artifact@v4
         with:
           name: checkpoint
           path: checkpoint.pkl
+      - name: Upload output log
+        uses: actions/upload-artifact@v4
+        with:
+          name: train_output
+          path: train_output.txt
 
   release:
     needs: train
@@ -35,6 +40,11 @@ jobs:
         with:
           name: checkpoint
           path: .
+      - name: Download train output
+        uses: actions/download-artifact@v4
+        with:
+          name: train_output
+          path: .
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -43,6 +53,7 @@ jobs:
         with:
           tag_name: v${{ github.run_number }}
           release_name: "Model checkpoint ${{ github.run_number }}"
+          body_path: train_output.txt
           draft: false
           prerelease: false
       - name: Upload checkpoint to Release
